@@ -3,41 +3,84 @@
 const path = require('path');
 const fastbootTransform = require('fastboot-transform');
 const Funnel = require('broccoli-funnel');
+const mergeTrees = require('broccoli-merge-trees');
+const resolve = require('resolve');
 
 module.exports = {
-  name: 'ember-cli-intl-tel-input',
+  name: require('./package').name,
 
   included: function(app) {
     this._super.included.apply(this, arguments);
 
     let config = app.options.intlTelInput;
-    let assetPath = path.join('node_modules', 'intl-tel-input', 'build');
-    let importOptions = {
-      using: [{
-        transformation: 'fastbootTransform'
-      }]
-    };
+    let vendorPath = `vendor/${this.name}`;
+    let host = this._findHost();
 
     if (config && true === config.includeUtilsScript) {
-      app.import(path.join(assetPath, 'js', 'utils.js'), importOptions);
+      host.import(path.join(vendorPath, 'utils.js'));
     }
 
-    app.import(path.join(assetPath, 'js', 'intlTelInput.js'), importOptions);
-    app.import(path.join(assetPath, 'css', 'intlTelInput.css'));
+    host.import(path.join(vendorPath, 'intlTelInput.js'));
+  },
+
+  treeForVendor() {
+    let intlInputPath = path.join(this.resolvePackagePath('intl-tel-input'), 'src', 'js');
+
+    let intlInputJs = fastbootTransform(new Funnel(intlInputPath, {
+      files: ['intlTelInput.js', 'utils.js'],
+      destDir: this.name
+    }));
+
+    return mergeTrees([intlInputJs]);
   },
 
   treeForPublic() {
-    let intlTelInputImagePath = path.join(this.app.project.root, 'node_modules', 'intl-tel-input', 'build', 'img');
-    let publicTree = new Funnel(intlTelInputImagePath, {
+    let intlInputImagePath = path.join(this.resolvePackagePath('intl-tel-input'), 'build', 'img');
+
+    let imagesDir = new Funnel(intlInputImagePath, {
       include: ['*.png'],
       destDir: 'img'
     });
-    return publicTree;
+
+    return mergeTrees([imagesDir]);
   },
 
-  importTransforms: function () {
-    return {
-      fastbootTransform: fastbootTransform
+  treeForStyles(tree) {
+    let styleTrees = [];
+    let host = this._findHost();
+    let scssPath = path.join(this.resolvePackagePath('intl-tel-input'), 'src', 'css')
+
+    if (host.project.findAddonByName('ember-cli-sass')) {
+      styleTrees.push(new Funnel(scssPath, {
+        files: ['intlTelInput.scss', 'sprite.scss'],
+        destDir: this.name
+      }));
     }
+
+    if (tree) {
+      styleTrees.push(tree);
+    }
+
+    return mergeTrees(styleTrees, { overwrite: true });
   },
+
+  resolvePackagePath(packageName) {
+    let host = this._findHost();
+    return path.dirname(resolve.sync(`${packageName}/package.json`, { basedir: host.project.root }));
+  },
+
+  _ensureFindHost() {
+    if (!this._findHost) {
+      this._findHost = function findHostShim() {
+        let current = this;
+        let app;
+
+        do {
+          app = current.app || app;
+        } while (current.parent.parent && (current = current.parent));
+
+        return app;
+      };
+    }
+  }
 };
