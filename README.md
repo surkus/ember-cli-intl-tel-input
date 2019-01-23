@@ -25,3 +25,8 @@ This README outlines the details of collaborating on this Ember addon.
 * `ember build`
 
 For more information on using ember-cli, visit [https://ember-cli.com/](https://ember-cli.com/).
+
+
+## License
+
+This project is licensed under the [MIT License](LICENSE.md).
