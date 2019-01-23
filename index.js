@@ -24,7 +24,7 @@ module.exports = {
   },
 
   treeForVendor() {
-    let intlInputPath = path.join(this.resolvePackagePath('intl-tel-input'), 'src', 'js');
+    let intlInputPath = path.join(this.resolvePackagePath('intl-tel-input'), 'build', 'js');
 
     let intlInputJs = fastbootTransform(new Funnel(intlInputPath, {
       files: ['intlTelInput.js', 'utils.js'],
